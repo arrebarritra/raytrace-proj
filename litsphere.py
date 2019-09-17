@@ -1,20 +1,28 @@
+from math import *
+
 class Sphere:
 
     def __init__(r):
         self.r = r
-        self.lightvalues = None #Sparar belysningsvärde för heltalparskoordinater (x, y) på sfären
-        """Initialiserar sphere objektet med en radie r"""
+        self.lightvalues = None
 
     def dist(a, b):
-        """Hjälpfunktion som returnerar distansen mellan punkterna a och b i planet"""
+        return sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
 
 
     def z(r, x, y):
-        """Returnerar z koordinat motsvarande till (x, y) koordinater på framsidan av sfären"""
+        squared = r**2 - x**2 - y**2
+        if squared >= 0:
+            return sqrt(squared)
+        else:
+            return 0
 
 
     def b(x, x0, y, y0, z, z0, r):
-        """"Returnerar ett belysningsvärde mellan -1 och 1 för en punkt på sfären beroende på belysningen position och vinkel"""
+        if z == None:
+            return 0
+        else:
+            return (x*xlight + y*ylight + z*zlight)/(r**2)
 
 
     def drawSphere(r, light):
