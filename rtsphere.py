@@ -31,7 +31,8 @@ class Vec3(object):
         return self.x * v.x + self.y * v.y + self.z * v.z
 
     def cross(self, v):
-        return Vec3(self.y * v.z - self.z * v.y, self.z * v.x - self.x * v.z, self.x * v.y - self.y * v.z)
+        return Vec3(self.y * v.z - self.z * v.y, self.z * v.x - self.x * v.z,
+                    self.x * v.y - self.y * v.z)
 
     def norm(self):
         return Vec3(self.x, self.y, self.z) / self.len()
@@ -71,6 +72,31 @@ class Colour(object):
                 int(self.scale * self.b))
 
 
+class Material(object):
+    """Innehåller information om färg, reflektivitet och specular highlight-egenskaper"""
+
+    def __init__(self, colour, mirror, specularcolour, shininess):
+        self.colour = colour
+        self.mirror = mirror
+        self.specularcolour = specularcolour
+        self.shininess = shininess
+
+
+class Intersection(object):
+    """Innehåller information om intersektionen av en Ray och objektet som den intersekterar"""
+
+    def __init__(self, ray):
+        self.t = ray.tmax
+        self.shape = None
+        self.c = Colour(0, 0, 0)
+
+    def setintersect(self, t, shape):
+        """Uppdaterar intersektionspunkten t och intersektionsobjektet shape"""
+        if t < self.t:
+            self.t = t
+            self.shape = shape
+
+
 class Ray(object):
     """Ljusstråle"""
 
@@ -85,16 +111,11 @@ class Ray(object):
         self.intersection = Intersection(self)
 
     def intersect(self, scene):
-        intersect = False
-        for shape in scene.shapes:
-            if shape.intersect(self):
-                intersect = True
+        intersect = self.doesintersect(scene)
 
         if intersect:
             intersection = self.intersection
-            intersection.shape.light(self, intersection.t,
-                                     self.point(intersection.t),
-                                     scene, self.bounce)
+            self.light(intersection.shape, intersection.t, scene)
 
         return intersect
 
@@ -103,6 +124,39 @@ class Ray(object):
             if shape.doesintersect(self):
                 return True
         return False
+
+    def light(self, shape, t, scene):
+        intersection = self.intersection
+        intersectpoint = self.point(intersection.t)
+        normal = shape.normal(intersectpoint)
+        nudge = intersectpoint + normal * self.tmin
+        intersectioncolour = intersection.c
+
+        # Ambient
+        intersectioncolour += shape.m.colour * scene.ambient
+
+        for light in self.scene.lights:
+            lightray = Ray(nudge, light.p - nudge,
+                           distmax=(light.p - nudge).len())
+
+            if not(lightray.doesintersect(scene)):
+                # Diffuse
+                diffuse = max(0, normal.dot(lightray.d))
+                intersectioncolour += shape.m.colour * light.colour * diffuse
+
+                # Specular
+                specular = max(0, normal.dot(
+                    (lightray.o - intersectpoint + self.o - intersectpoint)
+                    .norm()))
+                intersection.c += shape.m.specularcolour * \
+                    light.colour * (specular ** shape.m.shininess)
+
+        if self.bounce < self.maxbounce and shape.m.mirror > 0:
+            # Reflection
+            refd = (self.d - normal * 2 * self.d.dot(normal)).norm()
+            refray = Ray(nudge, refd, bounce=self.bounce + 1)
+            if refray.intersect(scene):
+                intersection.c += refray.intersection.c * shape.m.mirror
 
     def point(self, t):
         return self.o + self.d * t
@@ -118,18 +172,73 @@ class Camera(object):
         self.w = self.h * (w / h)
 
     def makeray(self, x, y):
-        """Skickar Ray baserat på (x, y) koordinater och kamerans position och
-        riktning"""
+        """Skickar Ray baserat på (x, y) koordinater och kamerans position och riktning"""
         rayd = self.fwd + (self.right * x * self.w) + (self.up * y * self.h)
         return Ray(self.o, rayd.norm())
 
 
-class Plane(Shape):
+class Plane(object):
     """Oändligt plan, implementerar Sphere metoder"""
 
+    def __init__(self, origin, normal, material):
+        self.o = origin
+        self.n = normal.norm()
+        self.m = material
 
-class Sphere(Shape):
+    def intersect(self, ray, doesintersectmethod=False):
+        if self.n.dot(ray.d) == 0:
+            return False
+        else:
+            t = self.n.dot(self.o - ray.o) / self.n.dot(ray.d)
+
+        if t > ray.tmin and t < ray.tmax:
+            if not doesintersectmethod:
+                ray.intersection.setintersect(t, self)
+            return True
+        else:
+            return False
+
+    def doesintersect(self, ray):
+        self.intersect(ray, doesintersectmethod=True)
+
+    def normal(self, point):
+        return self.n
+
+
+class Sphere(object):
     """Sfär, implementerar Sphere metoder"""
+
+    def __init__(self, origin, radius, material):
+        self.o = origin
+        self.r = radius
+        self.m = material
+
+    def intersect(self, ray, doesintersectmethod=False):
+        sphererayo = ray.o - self.o
+        # Solve quadratic for t, a = 1
+        b = 2 * ray.d.dot(sphererayo)
+        c = sphererayo.len() ** 2 - self.r ** 2
+        disc = b ** 2 - (4 * c)
+
+        if disc < 0:
+            return False
+
+        t1 = (-b - sqrt(disc)) / 2
+        t2 = (-b + sqrt(disc)) / 2
+        t = min(t1, t2)
+
+        if t > ray.tmin and t < ray.tmax:
+            if not doesintersectmethod:
+                ray.intersection.setintersect(t, self)
+            return True
+        else:
+            return False
+
+    def doesintersect(self, ray):
+        return self.intersect(ray, doesintersectmethod=True)
+
+    def normal(self, point):
+        return (point - self.o).norm()
 
 
 class Light(object):
@@ -141,17 +250,6 @@ class Scene(object):
 
     def importscene():
         """Läser in en scen från en JSON fil"""
-
-
-class Intersection(object):
-    """Innehåller information om intersektionen av en Ray och objektet som den intersekterar"""
-
-    def setintersect(self, t, shape):
-        """Uppdaterar intersektionspunkten t och intersektionsobjektet shape"""
-
-
-class Material(object):
-    """Innehåller information om färg, reflektivitet och specular highlight värden för ett material"""
 
 
 class GUI(object):
