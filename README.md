@@ -50,7 +50,7 @@ class Plane(Shape):
   """Oändligt plan, implementerar Sphere metoder"""
 
 
-class Shape(Shape):
+class Sphere(Shape):
   """Sfär, implementerar Sphere metoder"""
 
 
