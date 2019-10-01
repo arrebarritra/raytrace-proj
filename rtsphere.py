@@ -1,6 +1,6 @@
 from math import *
-import numpy as np
 from PIL import Image
+import json
 
 
 class Vec3(object):
@@ -115,7 +115,7 @@ class Ray(object):
 
         if intersect:
             intersection = self.intersection
-            self.light(intersection.shape, intersection.t, scene)
+            self.shade(intersection.shape, intersection.t, scene)
 
         return intersect
 
@@ -125,7 +125,7 @@ class Ray(object):
                 return True
         return False
 
-    def light(self, shape, t, scene):
+    def shade(self, shape, t, scene):
         intersection = self.intersection
         intersectpoint = self.point(intersection.t)
         normal = shape.normal(intersectpoint)
@@ -156,7 +156,7 @@ class Ray(object):
             refd = (self.d - normal * 2 * self.d.dot(normal)).norm()
             refray = Ray(nudge, refd, bounce=self.bounce + 1)
             if refray.intersect(scene):
-                intersection.c += refray.intersection.c * shape.m.mirror
+                intersectioncolour += refray.intersection.c * shape.m.mirror
 
     def point(self, t):
         return self.o + self.d * t
@@ -244,12 +244,43 @@ class Sphere(object):
 class Light(object):
     """Innehåller positionen och intensiteten av et ljusobjekt"""
 
+    def __init__(self, position, colour):
+        self.p = position
+        self.colour = colour
+
 
 class Scene(object):
-    """Innehåller alla Shape och Light objekt"""
+    """Innehåller alla Shape och Light objekt, importeras från en JSON fil"""
 
-    def importscene():
-        """Läser in en scen från en JSON fil"""
+    def __init__(self, filescene, filematerials):
+        scenedata = json.load(filescene)
+        materials = json.load(filematerials)
+        self.ambient = scenedata["ambient"]
+        self.shapes = []
+        self.lights = []
+
+        for shape in scenedata["Shapes"]:
+            origin = Vec3(shape["origin"][0], shape["origin"][1],
+                          shape["origin"][2])
+            materialname = shape["material"]
+            material = Material(materials[materialname]["colour"],
+                                materials[materialname]["mirror"],
+                                materials[materialname]["specularcolour"],
+                                materials[materialname]["shininess"])
+
+            if shape["type"] == "Plane":
+                normal = Vec3(shape["normal"][0], shape["normal"][1],
+                              shape["normal"][2])
+                self.shapes += Plane(origin, normal, material)
+            elif shape["type"] == "Sphere":
+                radius = shape["radius"]
+                self.shapes += Plane(origin, radius, material)
+
+        for light in scenedata["Lights"]:
+            position = Vec3(light["position"][0], light["position"][1],
+                            light["position"][2])
+            colour = light["colour"]
+            self.lights += Light(position, colour)
 
 
 class GUI(object):
