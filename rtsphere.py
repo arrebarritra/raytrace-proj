@@ -10,7 +10,7 @@ class Vec3(object):
         self.x, self.y, self.z = x, y, z
 
     def __str__(self):
-        return str(self.x), str(self.y), str(self.z)
+        return str(self.x) + ", " + str(self.y) + ", " + str(self.z)
 
     def __add__(self, v):
         return Vec3(self.x + v.x, self.y + v.y, self.z + v.z)
@@ -37,6 +37,9 @@ class Vec3(object):
     def norm(self):
         return Vec3(self.x, self.y, self.z) / self.len()
 
+    def listtovec(vec):
+        return Vec3(vec[0], vec[1], vec[2])
+
 
 class Colour(object):
     """Innehåller RGB färg med värden mellan 0 och 1, samt färgoperationer för blandning av färger"""
@@ -48,13 +51,16 @@ class Colour(object):
     def __init__(self, r, g, b):
         self.r, self.g, self.b = r, g, b
 
+    def __str__(self):
+        return str(self.r) + ", " + str(self.g) + ", " + str(self.b)
+
     def __add__(self, c):
         return Colour(self.r + c.r, self.g + c.g, self.b + c.b)
 
     def __mul__(self, c):
         if type(c) == Colour:
             return Colour(self.r * c.r, self.g * c.g, self.b * c.b)
-        elif type(c) == float:
+        elif type(c) == float or type(c) == int:
             return Colour(self.r * c, self.g * c, self.b * c)
 
     def gammaCorrection(self, exposure, gamma):
@@ -71,15 +77,19 @@ class Colour(object):
         return (int(self.scale * self.r), int(self.scale * self.g),
                 int(self.scale * self.b))
 
+    def listtocolour(c):
+        return Colour(c[0], c[1], c[2])
+
 
 class Material(object):
     """Innehåller information om färg, reflektivitet och specular highlight-egenskaper"""
 
-    def __init__(self, colour, mirror, specularcolour, shininess):
-        self.colour = colour
-        self.mirror = mirror
-        self.specularcolour = specularcolour
+    def __init__(self, ambient, diffuse, specular, shininess, mirror):
+        self.ambient = ambient
+        self.diffuse = diffuse
+        self.specular = specular
         self.shininess = shininess
+        self.mirror = mirror
 
 
 class Intersection(object):
@@ -111,12 +121,13 @@ class Ray(object):
         self.intersection = Intersection(self)
 
     def intersect(self, scene):
-        intersect = self.doesintersect(scene)
+        intersect = False
+        for shape in scene.shapes:
+            if shape.intersect(self):
+                intersect = True
 
         if intersect:
-            intersection = self.intersection
-            self.shade(intersection.shape, intersection.t, scene)
-
+            self.shade(scene)
         return intersect
 
     def doesintersect(self, scene):
@@ -125,51 +136,52 @@ class Ray(object):
                 return True
         return False
 
-    def shade(self, shape, t, scene):
+    def shade(self, scene):
         intersection = self.intersection
-        intersectpoint = self.point(intersection.t)
+        t = intersection.t
+        shape = intersection.shape
+        intersectpoint = self.point(t)
         normal = shape.normal(intersectpoint)
         nudge = intersectpoint + normal * self.tmin
-        intersectioncolour = intersection.c
 
         # Ambient
-        intersectioncolour += shape.m.colour * scene.ambient
+        intersection.c += shape.m.ambient * scene.ambient
 
-        for light in self.scene.lights:
+        for light in scene.lights:
             lightray = Ray(nudge, light.p - nudge,
                            distmax=(light.p - nudge).len())
 
             if not(lightray.doesintersect(scene)):
                 # Diffuse
                 diffuse = max(0, normal.dot(lightray.d))
-                intersectioncolour += shape.m.colour * light.colour * diffuse
+                intersection.c += shape.m.diffuse * light.diffuse * diffuse
 
                 # Specular
                 specular = max(0, normal.dot(
                     (lightray.o - intersectpoint + self.o - intersectpoint)
                     .norm()))
-                intersection.c += shape.m.specularcolour * \
-                    light.colour * (specular ** shape.m.shininess)
+                intersection.c += shape.m.specular * \
+                    light.specular * (specular ** shape.m.shininess)
 
         if self.bounce < self.maxbounce and shape.m.mirror > 0:
             # Reflection
             refd = (self.d - normal * 2 * self.d.dot(normal)).norm()
             refray = Ray(nudge, refd, bounce=self.bounce + 1)
             if refray.intersect(scene):
-                intersectioncolour += refray.intersection.c * shape.m.mirror
+                intersection.c += refray.intersection.c * shape.m.mirror
 
     def point(self, t):
         return self.o + self.d * t
 
 
 class Camera(object):
-    def __init__(self, o, fwd, upguide, w, h, fovh):
-        self.o = o
+    def __init__(self, origin, fwd, upguide, aspectratio, fovh):
+        self.o = origin
         self.fwd = fwd.norm()
         self.right = self.fwd.cross(upguide).norm()
         self.up = self.right.cross(self.fwd)
         self.h = tan(radians(fovh))
-        self.w = self.h * (w / h)
+        self.w = self.h * aspectratio
 
     def makeray(self, x, y):
         """Skickar Ray baserat på (x, y) koordinater och kamerans position och riktning"""
@@ -244,9 +256,10 @@ class Sphere(object):
 class Light(object):
     """Innehåller positionen och intensiteten av et ljusobjekt"""
 
-    def __init__(self, position, colour):
+    def __init__(self, position, diffuse, specular):
         self.p = position
-        self.colour = colour
+        self.diffuse = diffuse
+        self.specular = specular
 
 
 class Scene(object):
@@ -255,32 +268,48 @@ class Scene(object):
     def __init__(self, filescene, filematerials):
         scenedata = json.load(filescene)
         materials = json.load(filematerials)
-        self.ambient = scenedata["ambient"]
+        self.ambient = Colour.listtocolour(scenedata["ambient"])
         self.shapes = []
         self.lights = []
 
         for shape in scenedata["Shapes"]:
-            origin = Vec3(shape["origin"][0], shape["origin"][1],
-                          shape["origin"][2])
+            origin = Vec3.listtovec(shape["origin"])
             materialname = shape["material"]
-            material = Material(materials[materialname]["colour"],
-                                materials[materialname]["mirror"],
-                                materials[materialname]["specularcolour"],
-                                materials[materialname]["shininess"])
+            material = Material(Colour.listtocolour(
+                                materials[materialname]["ambient"]),
+                                Colour.listtocolour(
+                                materials[materialname]["diffuse"]),
+                                Colour.listtocolour(
+                                materials[materialname]["specular"]),
+                                materials[materialname]["shininess"],
+                                materials[materialname]["mirror"])
 
             if shape["type"] == "Plane":
-                normal = Vec3(shape["normal"][0], shape["normal"][1],
-                              shape["normal"][2])
-                self.shapes += Plane(origin, normal, material)
+                normal = Vec3.listtovec(shape["normal"])
+                self.shapes += [Plane(origin, normal, material)]
             elif shape["type"] == "Sphere":
                 radius = shape["radius"]
-                self.shapes += Plane(origin, radius, material)
+                self.shapes += [Sphere(origin, radius, material)]
 
         for light in scenedata["Lights"]:
-            position = Vec3(light["position"][0], light["position"][1],
-                            light["position"][2])
-            colour = light["colour"]
-            self.lights += Light(position, colour)
+            position = Vec3.listtovec(light["position"])
+            diffuse = Colour.listtocolour(light["diffuse"])
+            specular = Colour.listtocolour(light["specular"])
+            self.lights += [Light(position, diffuse, specular)]
+
+
+def render(cam, scene, x, y):
+    img = Image.new('RGB', (x, y), "black")
+    pixels = img.load()
+    for x in range(img.size[0]):
+        for y in range(img.size[1]):
+            ray = cam.makeray(
+                (x / float(img.size[0])) * -2 + 1, (y / float(img.size[1])) * -2 + 1)
+            if ray.intersect(scene):
+                ray.intersection.c.gammaCorrection(1, 2.2)
+                ray.intersection.c.clamp()
+                pixels[x, y] = ray.intersection.c.scaleRGB()
+    return img
 
 
 class GUI(object):
