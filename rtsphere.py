@@ -307,7 +307,7 @@ def render(cam, scene, x, y):
             ray = cam.makeray(
                 (x / float(img.size[0])) * -2 + 1, (y / float(img.size[1])) * -2 + 1)
             if ray.intersect(scene):
-                ray.intersection.c.gammaCorrection(2, 2.2)
+                ray.intersection.c.gammaCorrection(3, 2.2)
                 ray.intersection.c.clamp()
                 pixels[x, y] = ray.intersection.c.scaleRGB()
     return img
@@ -328,6 +328,12 @@ class GUI(object):
         self.fields = [tkinter.Entry(window), tkinter.Entry(window),
                        tkinter.Entry(window), tkinter.Entry(window),
                        tkinter.Entry(window), tkinter.Entry(window)]
+        self.fields[0].insert(0, '0, 0, 0')
+        self.fields[1].insert(0, '0, 0, 1')
+        self.fields[2].insert(0, '0, 1, 0')
+        self.fields[3].insert(0, '500')
+        self.fields[4].insert(0, '500')
+        self.fields[5].insert(0, '70')
         for i in range(len(self.fields)):
             self.fields[i].grid(row=i, column=1)
         button = tkinter.Button(window, text="Render", command=self.render)
