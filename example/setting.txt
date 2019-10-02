@@ -3,5 +3,6 @@ Forward vector:	0, 0, 1
 Up vector:	0, 1, 0
 x: 1280
 y: 720
+fovh: 60
 Ray max bounce: 8
 Exposure: 1
