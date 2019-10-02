@@ -1,4 +1,5 @@
 from math import *
+import tkinter
 from PIL import Image
 import json
 
@@ -306,7 +307,7 @@ def render(cam, scene, x, y):
             ray = cam.makeray(
                 (x / float(img.size[0])) * -2 + 1, (y / float(img.size[1])) * -2 + 1)
             if ray.intersect(scene):
-                ray.intersection.c.gammaCorrection(1, 2.2)
+                ray.intersection.c.gammaCorrection(2, 2.2)
                 ray.intersection.c.clamp()
                 pixels[x, y] = ray.intersection.c.scaleRGB()
     return img
@@ -315,5 +316,42 @@ def render(cam, scene, x, y):
 class GUI(object):
     """Skapa ett GUI där användaren kan specificera kamera och upplösning och displaya den raytracade bilden"""
 
+    def __init__(self):
+        window = tkinter.Tk()
+        window.title("Cam")
+        tkinter.Label(window, text="Origin vector").grid(row=0)
+        tkinter.Label(window, text="Forward vector").grid(row=1)
+        tkinter.Label(window, text="Up vector").grid(row=2)
+        tkinter.Label(window, text="x").grid(row=3)
+        tkinter.Label(window, text="y").grid(row=4)
+        tkinter.Label(window, text="fovh").grid(row=5)
+        self.fields = [tkinter.Entry(window), tkinter.Entry(window),
+                       tkinter.Entry(window), tkinter.Entry(window),
+                       tkinter.Entry(window), tkinter.Entry(window)]
+        for i in range(len(self.fields)):
+            self.fields[i].grid(row=i, column=1)
+        button = tkinter.Button(window, text="Render", command=self.render)
+        button.grid(row=6)
+        window.mainloop()
 
-"""Sätt upp kamera, läs och sätt upp geometriska objekt i scenen, skicka Ray för varje pixel och raytracea, skicka visa en bild"""
+    def render(self):
+        vec = []
+        for field in self.fields[:-3]:
+            vec += [self.strtolist(field.get())]
+        x = int(self.fields[-3].get())
+        y = int(self.fields[-2].get())
+        fovh = int(self.fields[-1].get())
+        cam = Camera(Vec3.listtovec(vec[0]), Vec3.listtovec(vec[1]),
+                     Vec3.listtovec(vec[2]), x / y, fovh)
+        scene = Scene(open("example/scenedata.json"), open("example/materials.json"))
+        render(cam, scene, x, y).save("img.png")
+        exit()
+
+    def strtolist(self, str):
+        list = str.split(", ")
+        for i in range(len(list)):
+            list[i] = int(list[i])
+        return list
+
+
+GUI()
