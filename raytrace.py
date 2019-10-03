@@ -341,7 +341,7 @@ def renderclick():
                  Vec3.listtovec(vec[2]), x / y, fovh, maxbounce)
     scene = Scene(open("scenedata.json"), open("materials.json"))
     img = render(cam, scene, x, y, exposure)
-    img.save("render.png")
+    img.show()
 
 
 def strtolist(str):
