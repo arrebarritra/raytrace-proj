@@ -1,0 +1,26 @@
+{
+  "metal":
+  {
+    "ambient": [0.560, 0.570, 0.580],
+    "diffuse": [0.560, 0.570, 0.580],
+    "specular": [1, 1, 1],
+    "shininess": 50,
+    "mirror": 0.4
+  },
+  "floor":
+  {
+    "ambient": [0.76, 0.60, 0.42],
+    "diffuse": [0.76, 0.60, 0.42],
+    "specular": [0, 0, 0],
+    "shininess": 60,
+    "mirror": 0
+  },
+  "plastic":
+  {
+    "ambient": [0, 0.416, 0.306],
+    "diffuse": [0, 0.416, 0.306],
+    "specular": [0.5, 0.5, 0.5],
+    "shininess": 50,
+    "mirror": 0.2
+  }
+}

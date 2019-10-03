@@ -70,11 +70,13 @@ class Colour(object):
         self.b = (self.b * exposure) ** gamma
 
     def clamp(self):
+        """Clampar RGB värden mellan 0 och 1"""
         self.r = max(self.min, min(self.max, self.r))
         self.g = max(self.min, min(self.max, self.g))
         self.b = max(self.min, min(self.max, self.b))
 
     def scaleRGB(self):
+        """Returnerar RGB värde på skala 0 till 255"""
         return (int(self.scale * self.r), int(self.scale * self.g),
                 int(self.scale * self.b))
 
@@ -122,6 +124,7 @@ class Ray(object):
         self.intersection = Intersection(self)
 
     def intersect(self, scene):
+        """Returnerar om detta objekt intersekterar scenen, uppdaterar intersection objektet"""
         intersect = False
         for shape in scene.shapes:
             if shape.intersect(self):
@@ -132,12 +135,14 @@ class Ray(object):
         return intersect
 
     def doesintersect(self, scene):
+        """Returnerar om detta objekt intersekterar scenen"""
         for shape in scene.shapes:
             if shape.doesintersect(self):
                 return True
         return False
 
     def shade(self, scene):
+        """Shadear scenen med ambient, diffuse och specular shadeing och beräknar reflektion, uppdaterar intersektionsärgen"""
         intersection = self.intersection
         t = intersection.t
         shape = intersection.shape
@@ -172,22 +177,24 @@ class Ray(object):
                 intersection.c += refray.intersection.c * shape.m.mirror
 
     def point(self, t):
+        """Returnerar punkten på detta objekt t enheter ifrån origo"""
         return self.o + self.d * t
 
 
 class Camera(object):
-    def __init__(self, origin, fwd, upguide, aspectratio, fovh):
+    def __init__(self, origin, fwd, upguide, aspectratio, fovh, maxbounce):
         self.o = origin
         self.fwd = fwd.norm()
         self.right = self.fwd.cross(upguide).norm()
         self.up = self.right.cross(self.fwd)
         self.h = tan(radians(fovh))
         self.w = self.h * aspectratio
+        self.maxbounce = maxbounce
 
     def makeray(self, x, y):
         """Skickar Ray baserat på (x, y) koordinater och kamerans position och riktning"""
         rayd = self.fwd + (self.right * x * self.w) + (self.up * y * self.h)
-        return Ray(self.o, rayd.norm())
+        return Ray(self.o, rayd.norm(), maxbounce=self.maxbounce)
 
 
 class Plane(object):
@@ -199,6 +206,7 @@ class Plane(object):
         self.m = material
 
     def intersect(self, ray, doesintersectmethod=False):
+        """Returnerar om ray intersekterar detta plan, uppdaterar intersection objektet"""
         if self.n.dot(ray.d) == 0:
             return False
         else:
@@ -212,9 +220,11 @@ class Plane(object):
             return False
 
     def doesintersect(self, ray):
+        """Returnerar om Ray intersekterar detta Plan"""
         self.intersect(ray, doesintersectmethod=True)
 
     def normal(self, point):
+        """Returnerar planets normalvektor"""
         return self.n
 
 
@@ -227,6 +237,7 @@ class Sphere(object):
         self.m = material
 
     def intersect(self, ray, doesintersectmethod=False):
+        """Returnerar om ray intersekterar denna sfär, uppdaterar intersection objektet"""
         sphererayo = ray.o - self.o
         # Solve quadratic for t, a = 1
         b = 2 * ray.d.dot(sphererayo)
@@ -248,9 +259,11 @@ class Sphere(object):
             return False
 
     def doesintersect(self, ray):
+        """Returnerar om ray intersekterar denna sfär"""
         return self.intersect(ray, doesintersectmethod=True)
 
     def normal(self, point):
+        """Returnerar sfärens normalvektor vid point"""
         return (point - self.o).norm()
 
 
@@ -299,65 +312,66 @@ class Scene(object):
             self.lights += [Light(position, diffuse, specular)]
 
 
-def render(cam, scene, x, y):
+def render(cam, scene, x, y, exposure, gamma=2.2):
+    """Renderar och returnar bild av scenen"""
     img = Image.new('RGB', (x, y), "black")
     pixels = img.load()
     for x in range(img.size[0]):
         for y in range(img.size[1]):
-            ray = cam.makeray(
-                (x / float(img.size[0])) * -2 + 1, (y / float(img.size[1])) * -2 + 1)
+            ray = cam.makeray((x / float(img.size[0])) * -2 + 1,
+                              (y / float(img.size[1])) * -2 + 1)
             if ray.intersect(scene):
-                ray.intersection.c.gammaCorrection(3, 2.2)
+                ray.intersection.c.gammaCorrection(exposure, gamma)
                 ray.intersection.c.clamp()
                 pixels[x, y] = ray.intersection.c.scaleRGB()
     return img
 
 
-class GUI(object):
-    """Skapa ett GUI där användaren kan specificera kamera och upplösning och displaya den raytracade bilden"""
-
-    def __init__(self):
-        window = tkinter.Tk()
-        window.title("Cam")
-        tkinter.Label(window, text="Origin vector").grid(row=0)
-        tkinter.Label(window, text="Forward vector").grid(row=1)
-        tkinter.Label(window, text="Up vector").grid(row=2)
-        tkinter.Label(window, text="x").grid(row=3)
-        tkinter.Label(window, text="y").grid(row=4)
-        tkinter.Label(window, text="fovh").grid(row=5)
-        self.fields = [tkinter.Entry(window), tkinter.Entry(window),
-                       tkinter.Entry(window), tkinter.Entry(window),
-                       tkinter.Entry(window), tkinter.Entry(window)]
-        self.fields[0].insert(0, '0, 0, 0')
-        self.fields[1].insert(0, '0, 0, 1')
-        self.fields[2].insert(0, '0, 1, 0')
-        self.fields[3].insert(0, '500')
-        self.fields[4].insert(0, '500')
-        self.fields[5].insert(0, '70')
-        for i in range(len(self.fields)):
-            self.fields[i].grid(row=i, column=1)
-        button = tkinter.Button(window, text="Render", command=self.render)
-        button.grid(row=6)
-        window.mainloop()
-
-    def render(self):
-        vec = []
-        for field in self.fields[:-3]:
-            vec += [self.strtolist(field.get())]
-        x = int(self.fields[-3].get())
-        y = int(self.fields[-2].get())
-        fovh = int(self.fields[-1].get())
-        cam = Camera(Vec3.listtovec(vec[0]), Vec3.listtovec(vec[1]),
-                     Vec3.listtovec(vec[2]), x / y, fovh)
-        scene = Scene(open("example/scenedata.json"), open("example/materials.json"))
-        render(cam, scene, x, y).save("img.png")
-        exit()
-
-    def strtolist(self, str):
-        list = str.split(", ")
-        for i in range(len(list)):
-            list[i] = int(list[i])
-        return list
+def renderclick():
+    """Skickar användarinmatade parametrar till render funktionen"""
+    vec = []
+    for field in fields[:-3]:
+        vec += [strtolist(field.get())]
+    x = int(fields[3].get())
+    y = int(fields[4].get())
+    fovh = float(fields[5].get())
+    maxbounce = int(fields[6].get())
+    exposure = float(fields[7].get())
+    cam = Camera(Vec3.listtovec(vec[0]), Vec3.listtovec(vec[1]),
+                 Vec3.listtovec(vec[2]), x / y, fovh, maxbounce)
+    scene = Scene(open("scenedata.json"), open("materials.json"))
+    img = render(cam, scene, x, y, exposure)
+    img.save("render.png")
 
 
-GUI()
+def strtolist(str):
+    list = str.split(", ")
+    for i in range(len(list)):
+        list[i] = float(list[i])
+    return list
+
+
+window = tkinter.Tk()
+window.title("Cam")
+tkinter.Label(window, text="Origin vector").grid(row=0)
+tkinter.Label(window, text="Forward vector").grid(row=1)
+tkinter.Label(window, text="Up vector").grid(row=2)
+tkinter.Label(window, text="x").grid(row=3)
+tkinter.Label(window, text="y").grid(row=4)
+tkinter.Label(window, text="fovh").grid(row=5)
+tkinter.Label(window, text="Ray max bounce").grid(row=6)
+tkinter.Label(window, text="Exposure").grid(row=7)
+fields = [tkinter.Entry(window) for i in range(8)]
+fields[0].insert(0, '0, 0, 0')
+fields[1].insert(0, '0, 0, 1')
+fields[2].insert(0, '0, 1, 0')
+fields[3].insert(0, '300')
+fields[4].insert(0, '200')
+fields[5].insert(0, '60')
+fields[6].insert(0, '3')
+fields[7].insert(0, '1')
+for i in range(len(fields)):
+    fields[i].grid(row=i, column=1)
+button = tkinter.Button(window, text="Render", command=renderclick)
+button.grid(row=len(fields)+1, column=1)
+window.mainloop()

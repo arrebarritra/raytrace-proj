@@ -1,0 +1,67 @@
+{
+  "ambient": [0.5, 0.5, 0.5],
+  "Shapes":
+    [
+      {
+        "type": "Plane",
+        "material": "floor",
+        "origin": [0, 0, 0],
+        "normal": [0, 1, 0]
+      },
+      {
+        "type": "Plane",
+        "material": "floor",
+        "origin": [-5, 0, 0],
+        "normal": [1, 0, 0]
+      },
+      {
+        "type": "Plane",
+        "material": "floor",
+        "origin": [6, 0, 0],
+        "normal": [-1, 0, 0]
+      },
+      {
+        "type": "Plane",
+        "material": "floor",
+        "origin": [0, 10, 0],
+        "normal": [0, -1, 0]
+      },
+      {
+        "type": "Plane",
+        "material": "floor",
+        "origin": [0, 0, 15],
+        "normal": [0, 0, -1]
+      },
+      {
+        "type": "Plane",
+        "material": "floor",
+        "origin": [0, 0, -5],
+        "normal": [0, 0, 1]
+      },
+      {
+        "type": "Sphere",
+        "material": "metal",
+        "origin": [2, 2, 4],
+        "radius": 2
+      },
+      {
+        "type": "Sphere",
+        "material": "plastic",
+        "origin": [-2, 6, 6],
+        "radius": 1
+      }
+    ],
+  "Lights":
+    [
+      {
+        "position": [0, 2, -1],
+        "diffuse": [0.5, 0.5, 0.5],
+        "specular": [0.5, 0.5, 0.5]
+      },
+      {
+        "position": [4, 6, 0],
+        "diffuse": [0.5, 0.5, 0.5],
+        "specular": [0.5, 0.5, 0.5]
+      }
+    ]
+}
