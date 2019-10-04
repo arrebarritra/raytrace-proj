@@ -96,7 +96,7 @@ class Material(object):
 
 
 class Intersection(object):
-    """Innehåller information om intersektionen av en Ray och objektet som den intersekterar"""
+    """Innehåller information om intersektionen av en Ray och objektet som den intersect:ar"""
 
     def __init__(self, ray):
         self.t = ray.tmax
@@ -124,7 +124,7 @@ class Ray(object):
         self.intersection = Intersection(self)
 
     def intersect(self, scene):
-        """Returnerar om detta objekt intersekterar scenen, uppdaterar intersection objektet"""
+        """Returnerar om detta objekt intersect:ar scenen, uppdaterar intersection objektet"""
         intersect = False
         for shape in scene.shapes:
             if shape.intersect(self):
@@ -135,14 +135,14 @@ class Ray(object):
         return intersect
 
     def doesintersect(self, scene):
-        """Returnerar om detta objekt intersekterar scenen"""
+        """Returnerar om detta objekt intersect:ar scenen"""
         for shape in scene.shapes:
             if shape.doesintersect(self):
                 return True
         return False
 
     def shade(self, scene):
-        """Shadear scenen med ambient, diffuse och specular shadeing och beräknar reflektion, uppdaterar intersektionsärgen"""
+        """Shadear scenen med ambient, diffuse och specular shading och beräknar reflektion, uppdaterar intersektionsfärgen"""
         intersection = self.intersection
         t = intersection.t
         shape = intersection.shape
@@ -177,11 +177,12 @@ class Ray(object):
                 intersection.c += refray.intersection.c * shape.m.mirror
 
     def point(self, t):
-        """Returnerar punkten på detta objekt t enheter ifrån origo"""
+        """Returnerar punkten på denna Ray t enheter ifrån origo"""
         return self.o + self.d * t
 
 
 class Camera(object):
+    """Skapar rays"""
     def __init__(self, origin, fwd, upguide, aspectratio, fovh, maxbounce):
         self.o = origin
         self.fwd = fwd.norm()
@@ -192,36 +193,36 @@ class Camera(object):
         self.maxbounce = maxbounce
 
     def makeray(self, x, y):
-        """Skickar Ray baserat på (x, y) koordinater och kamerans position och riktning"""
+        """Skickar Ray baserat på (x, y) koordinater och kamerans position och riktning, returnerar Ray med intersection objektet som innehåller dess färg"""
         rayd = self.fwd + (self.right * x * self.w) + (self.up * y * self.h)
         return Ray(self.o, rayd.norm(), maxbounce=self.maxbounce)
 
 
 class Plane(object):
-    """Oändligt plan, implementerar Sphere metoder"""
+    """Oändligt plan"""
 
     def __init__(self, origin, normal, material):
         self.o = origin
         self.n = normal.norm()
         self.m = material
 
-    def intersect(self, ray, doesintersectmethod=False):
-        """Returnerar om ray intersekterar detta plan, uppdaterar intersection objektet"""
+    def intersect(self, ray, updateintersect=True):
+        """Returnerar om ray intersect:ar detta plan, uppdaterar intersection objektet"""
         if self.n.dot(ray.d) == 0:
             return False
         else:
             t = self.n.dot(self.o - ray.o) / self.n.dot(ray.d)
 
         if t > ray.tmin and t < ray.tmax:
-            if not doesintersectmethod:
+            if updateintersect:
                 ray.intersection.setintersect(t, self)
             return True
         else:
             return False
 
     def doesintersect(self, ray):
-        """Returnerar om Ray intersekterar detta Plan"""
-        self.intersect(ray, doesintersectmethod=True)
+        """Returnerar om Ray intersect:ar detta Plan"""
+        self.intersect(ray, updateintersect=False)
 
     def normal(self, point):
         """Returnerar planets normalvektor"""
@@ -229,15 +230,15 @@ class Plane(object):
 
 
 class Sphere(object):
-    """Sfär, implementerar Sphere metoder"""
+    """Sfär"""
 
     def __init__(self, origin, radius, material):
         self.o = origin
         self.r = radius
         self.m = material
 
-    def intersect(self, ray, doesintersectmethod=False):
-        """Returnerar om ray intersekterar denna sfär, uppdaterar intersection objektet"""
+    def intersect(self, ray, updateintersect=True):
+        """Returnerar om ray intersect:ar denna sfär, uppdaterar intersection objektet"""
         sphererayo = ray.o - self.o
         # Solve quadratic for t, a = 1
         b = 2 * ray.d.dot(sphererayo)
@@ -252,15 +253,15 @@ class Sphere(object):
         t = min(t1, t2)
 
         if t > ray.tmin and t < ray.tmax:
-            if not doesintersectmethod:
+            if updateintersect:
                 ray.intersection.setintersect(t, self)
             return True
         else:
             return False
 
     def doesintersect(self, ray):
-        """Returnerar om ray intersekterar denna sfär"""
-        return self.intersect(ray, doesintersectmethod=True)
+        """Returnerar om ray intersect:ar denna sfär"""
+        return self.intersect(ray, updateintersect=False)
 
     def normal(self, point):
         """Returnerar sfärens normalvektor vid point"""
@@ -268,7 +269,7 @@ class Sphere(object):
 
 
 class Light(object):
-    """Innehåller positionen och intensiteten av et ljusobjekt"""
+    """Innehåller positionen och egenskaper av en point light"""
 
     def __init__(self, position, diffuse, specular):
         self.p = position
