@@ -111,7 +111,7 @@ class Intersection(object):
 
 
 class Ray(object):
-    """Ljusstråle"""
+    """Hanterar en rays position, riktning och intersektion, innehåller metoder för att beräkna intersektionen shade:a rayen"""
 
     def __init__(self, origin, direction, distmin=0.0001, distmax=1e30,
                  maxbounce=3, bounce=0):
@@ -182,7 +182,7 @@ class Ray(object):
 
 
 class Camera(object):
-    """Skapar rays"""
+    """Skapar en kamera med position och riktning, skickar Rays baserat på pixeln som ska färgas"""
     def __init__(self, origin, fwd, upguide, aspectratio, fovh, maxbounce):
         self.o = origin
         self.fwd = fwd.norm()
@@ -193,13 +193,13 @@ class Camera(object):
         self.maxbounce = maxbounce
 
     def makeray(self, x, y):
-        """Skickar Ray baserat på (x, y) koordinater och kamerans position och riktning, returnerar Ray med intersection objektet som innehåller dess färg"""
+        """Skickar en Ray som färgar pixeln (x, y) baserat kamerans position och riktning, returnerar Ray med intersection objektet som innehåller dess färg"""
         rayd = self.fwd + (self.right * x * self.w) + (self.up * y * self.h)
         return Ray(self.o, rayd.norm(), maxbounce=self.maxbounce)
 
 
 class Plane(object):
-    """Oändligt plan"""
+    """Hanterar ett plan i rymden och beräknar dess intersektioner med Rays"""
 
     def __init__(self, origin, normal, material):
         self.o = origin
@@ -230,7 +230,7 @@ class Plane(object):
 
 
 class Sphere(object):
-    """Sfär"""
+    """Hanterar en sfär i rymden och beräknar dess intersektioner med Rays"""
 
     def __init__(self, origin, radius, material):
         self.o = origin
@@ -314,7 +314,7 @@ class Scene(object):
 
 
 def render(cam, scene, x, y, exposure, gamma=2.2):
-    """Renderar och returnar bild av scenen"""
+    """Renderar (färgar pixlar) och returnar bild av scenen"""
     img = Image.new('RGB', (x, y), "black")
     pixels = img.load()
     for x in range(img.size[0]):
@@ -328,51 +328,64 @@ def render(cam, scene, x, y, exposure, gamma=2.2):
     return img
 
 
-def renderclick():
-    """Skickar användarinmatade parametrar till render funktionen"""
-    vec = []
-    for field in fields[:-3]:
-        vec += [strtolist(field.get())]
-    x = int(fields[3].get())
-    y = int(fields[4].get())
-    fovh = float(fields[5].get())
-    maxbounce = int(fields[6].get())
-    exposure = float(fields[7].get())
-    cam = Camera(Vec3.listtovec(vec[0]), Vec3.listtovec(vec[1]),
-                 Vec3.listtovec(vec[2]), x / y, fovh, maxbounce)
-    scene = Scene(open("scenedata.json"), open("materials.json"))
-    img = render(cam, scene, x, y, exposure)
-    img.show()
+class optionsWindow(object):
+    """Fönster med render settings"""
+
+    def __init__(self):
+        window = tkinter.Tk()
+        window.title("Cam")
+        tkinter.Label(window, text="Origin vector").grid(row=0)
+        tkinter.Label(window, text="Forward vector").grid(row=1)
+        tkinter.Label(window, text="Up vector").grid(row=2)
+        tkinter.Label(window, text="x").grid(row=3)
+        tkinter.Label(window, text="y").grid(row=4)
+        tkinter.Label(window, text="fovh").grid(row=5)
+        tkinter.Label(window, text="Ray max bounce").grid(row=6)
+        tkinter.Label(window, text="Exposure").grid(row=7)
+        self.fields = [tkinter.Entry(window) for i in range(8)]
+        fields = self.fields
+        fields[0].insert(0, '0, 0, 0')
+        fields[1].insert(0, '0, 0, 1')
+        fields[2].insert(0, '0, 1, 0')
+        fields[3].insert(0, '300')
+        fields[4].insert(0, '200')
+        fields[5].insert(0, '60')
+        fields[6].insert(0, '3')
+        fields[7].insert(0, '1')
+        for i in range(len(fields)):
+            fields[i].grid(row=i, column=1)
+        button = tkinter.Button(window, text="Render", command=self.render)
+        button.grid(row=len(fields)+1, column=1)
+        window.mainloop()
+
+    def render(self):
+        """Skickar användarinmatade parametrar till render funktionen"""
+        fields = self.fields
+        vec = []
+        for field in fields[:-3]:
+            vec += [strtolist(field.get())]
+        x = int(fields[3].get())
+        y = int(fields[4].get())
+        fovh = float(fields[5].get())
+        maxbounce = int(fields[6].get())
+        exposure = float(fields[7].get())
+        cam = Camera(Vec3.listtovec(vec[0]), Vec3.listtovec(vec[1]),
+                     Vec3.listtovec(vec[2]), x / y, fovh, maxbounce)
+        scene = Scene(open("scenedata.json"), open("materials.json"))
+        img = render(cam, scene, x, y, exposure)
+        img.show()
 
 
-def strtolist(str):
-    list = str.split(", ")
-    for i in range(len(list)):
-        list[i] = float(list[i])
-    return list
+def strtolist(commastr):
+    convlist = commastr.split(", ")
+    for i in range(len(convlist)):
+        convlist[i] = float(convlist[i])
+    return convlist
 
 
-window = tkinter.Tk()
-window.title("Cam")
-tkinter.Label(window, text="Origin vector").grid(row=0)
-tkinter.Label(window, text="Forward vector").grid(row=1)
-tkinter.Label(window, text="Up vector").grid(row=2)
-tkinter.Label(window, text="x").grid(row=3)
-tkinter.Label(window, text="y").grid(row=4)
-tkinter.Label(window, text="fovh").grid(row=5)
-tkinter.Label(window, text="Ray max bounce").grid(row=6)
-tkinter.Label(window, text="Exposure").grid(row=7)
-fields = [tkinter.Entry(window) for i in range(8)]
-fields[0].insert(0, '0, 0, 0')
-fields[1].insert(0, '0, 0, 1')
-fields[2].insert(0, '0, 1, 0')
-fields[3].insert(0, '300')
-fields[4].insert(0, '200')
-fields[5].insert(0, '60')
-fields[6].insert(0, '3')
-fields[7].insert(0, '1')
-for i in range(len(fields)):
-    fields[i].grid(row=i, column=1)
-button = tkinter.Button(window, text="Render", command=renderclick)
-button.grid(row=len(fields)+1, column=1)
-window.mainloop()
+def main():
+    optionsWindow()
+
+
+if __name__ == '__main__':
+    main()
