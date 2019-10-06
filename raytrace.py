@@ -2,6 +2,7 @@ from math import *
 import tkinter
 from PIL import Image
 import json
+import numpy as np
 
 
 class Vec3(object):
@@ -33,7 +34,7 @@ class Vec3(object):
 
     def cross(self, v):
         return Vec3(self.y * v.z - self.z * v.y, self.z * v.x - self.x * v.z,
-                    self.x * v.y - self.y * v.z)
+                    self.x * v.y - self.y * v.x)
 
     def norm(self):
         return Vec3(self.x, self.y, self.z) / self.len()
@@ -65,6 +66,7 @@ class Colour(object):
             return Colour(self.r * c, self.g * c, self.b * c)
 
     def gammaCorrection(self, exposure, gamma):
+        """Justerar pixelfärgen till en gammakurva"""
         self.r = (self.r * exposure) ** gamma
         self.g = (self.g * exposure) ** gamma
         self.b = (self.b * exposure) ** gamma
@@ -183,12 +185,13 @@ class Ray(object):
 
 class Camera(object):
     """Skapar en kamera med position och riktning, skickar Rays baserat på pixeln som ska färgas"""
-    def __init__(self, origin, fwd, upguide, aspectratio, fovh, maxbounce):
+
+    def __init__(self, origin, fwd, upguide, aspectratio, fovv, maxbounce):
         self.o = origin
         self.fwd = fwd.norm()
-        self.right = self.fwd.cross(upguide).norm()
-        self.up = self.right.cross(self.fwd)
-        self.h = tan(radians(fovh))
+        self.right = self.fwd.cross(upguide).norm() * -1
+        self.up = self.right.cross(self.fwd) * -1
+        self.h = tan(radians(fovv))
         self.w = self.h * aspectratio
         self.maxbounce = maxbounce
 
@@ -313,21 +316,6 @@ class Scene(object):
             self.lights += [Light(position, diffuse, specular)]
 
 
-def render(cam, scene, x, y, exposure, gamma=2.2):
-    """Renderar (färgar pixlar) och returnar bild av scenen"""
-    img = Image.new('RGB', (x, y), "black")
-    pixels = img.load()
-    for x in range(img.size[0]):
-        for y in range(img.size[1]):
-            ray = cam.makeray((x / float(img.size[0])) * -2 + 1,
-                              (y / float(img.size[1])) * -2 + 1)
-            if ray.intersect(scene):
-                ray.intersection.c.gammaCorrection(exposure, gamma)
-                ray.intersection.c.clamp()
-                pixels[x, y] = ray.intersection.c.scaleRGB()
-    return img
-
-
 class optionsWindow(object):
     """Fönster med render settings"""
 
@@ -337,16 +325,16 @@ class optionsWindow(object):
         tkinter.Label(window, text="Origin vector").grid(row=0)
         tkinter.Label(window, text="Forward vector").grid(row=1)
         tkinter.Label(window, text="Up vector").grid(row=2)
-        tkinter.Label(window, text="x").grid(row=3)
-        tkinter.Label(window, text="y").grid(row=4)
-        tkinter.Label(window, text="fovh").grid(row=5)
+        tkinter.Label(window, text="Image width").grid(row=3)
+        tkinter.Label(window, text="Image height").grid(row=4)
+        tkinter.Label(window, text="Vertical FOV").grid(row=5)
         tkinter.Label(window, text="Ray max bounce").grid(row=6)
         tkinter.Label(window, text="Exposure").grid(row=7)
         self.fields = [tkinter.Entry(window) for i in range(8)]
         fields = self.fields
-        fields[0].insert(0, '0, 0, 0')
-        fields[1].insert(0, '0, 0, 1')
-        fields[2].insert(0, '0, 1, 0')
+        fields[0].insert(0, '0,0,0')
+        fields[1].insert(0, '0,0,1')
+        fields[2].insert(0, '0,1,0')
         fields[3].insert(0, '300')
         fields[4].insert(0, '200')
         fields[5].insert(0, '60')
@@ -364,20 +352,35 @@ class optionsWindow(object):
         vec = []
         for field in fields[:-3]:
             vec += [strtolist(field.get())]
-        x = int(fields[3].get())
-        y = int(fields[4].get())
-        fovh = float(fields[5].get())
+        width = int(fields[3].get())
+        height = int(fields[4].get())
+        fovv = float(fields[5].get())
         maxbounce = int(fields[6].get())
         exposure = float(fields[7].get())
         cam = Camera(Vec3.listtovec(vec[0]), Vec3.listtovec(vec[1]),
-                     Vec3.listtovec(vec[2]), x / y, fovh, maxbounce)
+                     Vec3.listtovec(vec[2]), width / height, fovv, maxbounce)
         scene = Scene(open("scenedata.json"), open("materials.json"))
-        img = render(cam, scene, x, y, exposure)
+        img = render(cam, scene, width, height, exposure)
         img.show()
 
 
-def strtolist(commastr):
-    convlist = commastr.split(", ")
+def render(cam, scene, width, height, exposure, gamma=2.2):
+    """Renderar (färgar pixlar) och returnar bild av scenen"""
+    img = Image.new('RGB', (width, height), 'black')
+    pixels = img.load()
+    for x, xspace in zip(range(width), np.linspace(-1, 1, width)):
+        for y, yspace in zip(range(height), np.linspace(1, -1, height)):
+            ray = cam.makeray(float(xspace), float(yspace))
+            if ray.intersect(scene):
+                ray.intersection.c.gammaCorrection(exposure, gamma)
+                ray.intersection.c.clamp()
+                pixels[x, y] = ray.intersection.c.scaleRGB()
+    return img
+
+
+def strtolist(cstr):
+    """Konverterar en kommaseparerad sträng till en lista av floats, ex. "0,1,2"->[0.0,1.0,2.0]"""
+    convlist = cstr.split(",")
     for i in range(len(convlist)):
         convlist[i] = float(convlist[i])
     return convlist
