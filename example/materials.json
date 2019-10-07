@@ -1,26 +1,42 @@
 {
+  "marble":
+  {
+    "ambient": [0.71, 0.7, 0.68],
+    "diffuse": [0.71, 0.7, 0.68],
+    "specular": [1, 1, 1],
+    "shininess": 60,
+    "mirror": 0.5
+  },
   "metal":
   {
-    "ambient": [0.560, 0.570, 0.580],
-    "diffuse": [0.560, 0.570, 0.580],
+    "ambient": [0.56, 0.57, 0.58],
+    "diffuse": [0.56, 0.57, 0.58],
     "specular": [1, 1, 1],
     "shininess": 50,
     "mirror": 0.4
   },
-  "floor":
-  {
-    "ambient": [0.76, 0.60, 0.42],
-    "diffuse": [0.76, 0.60, 0.42],
-    "specular": [0, 0, 0],
-    "shininess": 60,
-    "mirror": 0
-  },
-  "plastic":
+  "greenplastic":
   {
     "ambient": [0, 0.416, 0.306],
     "diffuse": [0, 0.416, 0.306],
     "specular": [0.5, 0.5, 0.5],
     "shininess": 50,
     "mirror": 0.2
+  },
+  "redvelvet":
+  {
+    "ambient": [0.57, 0.21, 0.24],
+    "diffuse": [0.57, 0.21, 0.24],
+    "specular": [1, 1, 1],
+    "shininess": 30,
+    "mirror": 0.2
+  },
+  "phthaloblue":
+  {
+    "ambient": [0, 0.06, 0.54],
+    "diffuse": [0, 0.06, 0.54],
+    "specular": [1, 1, 1],
+    "shininess": 100,
+    "mirror": 0.6
   }
 }

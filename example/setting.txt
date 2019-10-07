@@ -1,8 +1,8 @@
-Origin vector:	2, 5, 0
-Forward vector:	0, 0, 1
-Up vector:	0, 1, 0
-x: 1280
-y: 720
-fovh: 60
-Ray max bounce: 8
-Exposure: 1
+Origin vector:	0,8,-7
+Forward vector:	0,-0.3,1
+Up vector:	0,1,0
+Image width:	1920
+Image height:	1080
+Vertical FOV:	30
+Ray max bounce:	20
+Exposure:	1
