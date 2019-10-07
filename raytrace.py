@@ -27,19 +27,24 @@ class Vec3(object):
         return self * (1 / float(v))
 
     def len(self):
+        """Returnerar denna Vec3:s längd"""
         return sqrt(self.x ** 2 + self.y ** 2 + self.z ** 2)
 
     def dot(self, v):
+        """Returnerar skalärprodukten av denna Vec3 och Vec3:n v"""
         return self.x * v.x + self.y * v.y + self.z * v.z
 
     def cross(self, v):
+        """Returnerar kryssprodukten av denna Vec3 och Vec3:n v"""
         return Vec3(self.y * v.z - self.z * v.y, self.z * v.x - self.x * v.z,
                     self.x * v.y - self.y * v.x)
 
     def norm(self):
+        """Returnerar denna Vec3 normaliserad"""
         return Vec3(self.x, self.y, self.z) / self.len()
 
     def listtovec(vec):
+        """Konverterar en lista till Vec3"""
         return Vec3(vec[0], vec[1], vec[2])
 
 
@@ -83,6 +88,7 @@ class Colour(object):
                 int(self.scale * self.b))
 
     def listtocolour(c):
+        """Konverterar en lista till Colour"""
         return Colour(c[0], c[1], c[2])
 
 
@@ -171,8 +177,8 @@ class Ray(object):
                 intersection.c += shape.m.specular * \
                     light.specular * (specular ** shape.m.shininess)
 
+        # Reflection
         if self.bounce < self.maxbounce and shape.m.mirror > 0:
-            # Reflection
             refd = (self.d - normal * 2 * self.d.dot(normal)).norm()
             refray = Ray(nudge, refd, bounce=self.bounce + 1)
             if refray.intersect(scene):
