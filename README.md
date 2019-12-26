@@ -1,6 +1,9 @@
 ## Inledning
 Jag kommer att implementera "Belysning av klot" P-uppgiften med hjälp av en raytracer. Den ska kunna rendera en scen med oändliga planer och sfärer med godtyckligt många ljuskällor. Utöver diffuse shading och skuggor som förekommer i den originella uppgiften kommer jag att implementera ambient och specular shading, och reflektion. Att beräkna reflektionen kommer troligtvis vara den svåraste delen av projektet då man måste beräkna och skicka rays rekursivt och kombinera färgen av reflektionsrays med färgen av den originella objektet. Dataflödet är också en svår aspekt av projektet då jag måste göra beslut om jag t.ex. ska returna färgen av en Ray i funktionen som beräknar om en Ray intersekterar ett objekt, eller om jag ska ha en metod som ändrar färgen i Ray objektet direkt.
 
+## Exempel render
+<img src="example/render.png" width="500">
+
 ## Användarscenarier
 ### Klot i ett rum
 Användaren vill simulera hur två reflektiva klot i ett kubiskt rum med två ljuskällor. Användaren kodar scenen i en JSON fil där objekten, dess färger och optiska egenskaper specificeras. Denna fil läses in av programmet. Användaren inputtar kamerans koordinater och riktning via användargränssnittet. En bild av scenen outputtas i användargränssnittet.
